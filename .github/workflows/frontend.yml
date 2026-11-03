@@ -1,0 +1,84 @@
+name: Frontend validation
+on:
+  push:
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run format:check
+      - run: npm run typecheck
+      - run: npm run contracts:check
+      - run: npm test
+      - run: npm run build
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:e2e
+      - run: npm audit --omit=dev --audit-level=high
+  api-integration:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: RadIntel-AI.Frontend
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: synthetic-ci-only
+          POSTGRES_DB: postgres
+        ports:
+          - 55432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d postgres"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      RADINTEL_TEST_POSTGRES_ADMIN: Host=127.0.0.1;Port=55432;Database=postgres;Username=postgres;Password=synthetic-ci-only;Pooling=false
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: RadIntel-AI.Frontend
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          repository: ${{ vars.RADINTEL_BACKEND_REPOSITORY || format('{0}/RadIntel-AI', github.repository_owner) }}
+          ref: ${{ vars.RADINTEL_BACKEND_REF || '' }}
+          token: ${{ secrets.RADINTEL_REPOSITORY_TOKEN || github.token }}
+          path: RadIntel-AI
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          repository: ${{ vars.FRAMEWORK_REPOSITORY || format('{0}/Framework', github.repository_owner) }}
+          ref: ${{ vars.FRAMEWORK_REF || '' }}
+          token: ${{ secrets.RADINTEL_REPOSITORY_TOKEN || github.token }}
+          path: Framework
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          repository: ${{ vars.AI_FRAMEWORK_REPOSITORY || format('{0}/AI-Framework', github.repository_owner) }}
+          ref: ${{ vars.AI_FRAMEWORK_REF || '' }}
+          token: ${{ secrets.RADINTEL_REPOSITORY_TOKEN || github.token }}
+          path: AI-Framework
+          persist-credentials: false
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: RadIntel-AI/global.json
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: RadIntel-AI.Frontend/package-lock.json
+      - run: npm ci
+      - run: dotnet run --project ../RadIntel-AI/tools/RadIntel.OpenApi -- "$GITHUB_WORKSPACE/RadIntel-AI.Frontend/api/openapi.json" --check
+      - run: npm run contracts:check
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:integration

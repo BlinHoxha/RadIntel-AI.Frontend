@@ -1,0 +1,17 @@
+{
+  "generated": true,
+  "fixtures": {
+    "CT": {
+      "metadataSha256": "6b43870bc10b2d26485b2083c9898173d6e22ec4b030bf98de46a6cd2b1e075c",
+      "pixelSha256": [
+        "9974444a6b044e71cec0ea261724fa2fdebe4fdb97d31ee8da6e3cc35ee7e16f",
+        "8487a4b8624a60645756b114f0433f0cb78ba09f270f9b408b0ab5db45d01118",
+        "01d6c21f2a6ef74c1058d840b9179e5221359b09087106516dadeabbfc2c679d"
+      ]
+    },
+    "DX": {
+      "metadataSha256": "7aa86c517bc4dd34ddcd09892416427ebe8053d677d1e40cd14bfc1b98f7d1aa",
+      "pixelSha256": ["71ed8262a9e82260038ea27a07da7c475af1207bd32ea7d7b2f32ed4be1ef16b"]
+    }
+  }
+}

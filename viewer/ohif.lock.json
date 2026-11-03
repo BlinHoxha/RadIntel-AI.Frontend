@@ -1,0 +1,11 @@
+{
+  "package": "@ohif/app",
+  "version": "3.11.1",
+  "tarball": "https://registry.npmjs.org/@ohif/app/-/app-3.11.1.tgz",
+  "integrity": "sha512-0lJRyHguGuIR06PxeJ3rqnPWf1OAqsaXGuqT2kl5HkNjIOxBDnRTTMvyHnkn3ZyjcHlsIhY8gf0h7AhVORqsSQ==",
+  "sha256": "6f414753a2e1a498c72761cb52b1f67754f4855b8a565c8e31f232ee3a8355c5",
+  "sourceTag": "https://github.com/OHIF/Viewers/tree/v3.11.1",
+  "rootLicense": "MIT",
+  "purpose": "Local synthetic proof only; not a dependency security or clinical acceptance.",
+  "sourceCommit": "3c2b027e8bc7a238ffe46ecb5f57c6c913069c3e"
+}
