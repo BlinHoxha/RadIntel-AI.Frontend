@@ -51,7 +51,7 @@ test('English and Albanian navigation and mobile read-only editing', async ({ pa
 });
 test('dashboard app chrome passes automated axe checks', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 1100 });
-  await page.screenshot({ path: 'artifacts/dashboard.png', fullPage: true });
+  await page.screenshot({ path: 'artifacts/run/dashboard.png', fullPage: true });
   await page.addScriptTag({ content: AxeBuilder.source });
   const violations = await page.evaluate(async () => {
     const axe = (window as unknown as { axe: typeof AxeBuilder }).axe;

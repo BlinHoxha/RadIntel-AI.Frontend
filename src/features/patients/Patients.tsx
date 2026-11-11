@@ -10,9 +10,21 @@ import { facilityPath, request } from '../../shared/api/client';
 import { Empty, ErrorBox, Loading, Modal } from '../../shared/ui';
 import { usePatients } from './queries';
 const patientSchema = z.object({
-  displayName: z.string().trim().min(1).max(200),
-  identifier: z.string().trim().min(1).max(100),
-  identifierIssuer: z.string().trim().min(1).max(100),
+  displayName: z
+    .string()
+    .trim()
+    .min(1, 'String must contain at least 1 character(s)')
+    .max(200, 'String must contain at most 200 character(s)'),
+  identifier: z
+    .string()
+    .trim()
+    .min(1, 'String must contain at least 1 character(s)')
+    .max(100, 'String must contain at most 100 character(s)'),
+  identifierIssuer: z
+    .string()
+    .trim()
+    .min(1, 'String must contain at least 1 character(s)')
+    .max(100, 'String must contain at most 100 character(s)'),
   birthDate: z.string(),
 });
 type Values = z.infer<typeof patientSchema>;

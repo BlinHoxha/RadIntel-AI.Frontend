@@ -17,12 +17,24 @@ import { editableContent } from './content';
 import { RevisionProvenance } from './RevisionProvenance';
 const ImagingPanel = lazy(() => import('../imaging/ImagingPanel'));
 const contentSchema = z.object({
-  examination: z.string().trim().min(1).max(500),
-  findings: z.string().trim().min(1).max(30000),
-  impression: z.string().trim().min(1).max(10000),
+  examination: z
+    .string()
+    .trim()
+    .min(1, 'String must contain at least 1 character(s)')
+    .max(500, 'String must contain at most 500 character(s)'),
+  findings: z
+    .string()
+    .trim()
+    .min(1, 'String must contain at least 1 character(s)')
+    .max(30000, 'String must contain at most 30000 character(s)'),
+  impression: z
+    .string()
+    .trim()
+    .min(1, 'String must contain at least 1 character(s)')
+    .max(10000, 'String must contain at most 10000 character(s)'),
   language: z.enum(['en', 'sq']),
-  indication: z.string().max(4000).optional(),
-  technique: z.string().max(4000).optional(),
+  indication: z.string().max(4000, 'String must contain at most 4000 character(s)').optional(),
+  technique: z.string().max(4000, 'String must contain at most 4000 character(s)').optional(),
 });
 const blank = editableContent();
 export function StudyWorkspace({

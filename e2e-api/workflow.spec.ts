@@ -337,7 +337,7 @@ test('failed comparison fetch retains local text; another server edit requires a
   await expect(page.getByLabel('Server findings', { exact: true })).toHaveText(
     'First remote revision',
   );
-  await page.screenshot({ path: 'artifacts/report-conflict.png', fullPage: true });
+  await page.screenshot({ path: 'artifacts/run/report-conflict.png', fullPage: true });
 
   await post(path + '/drafts', {
     ...content,

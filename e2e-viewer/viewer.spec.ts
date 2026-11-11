@@ -141,7 +141,7 @@ for (const kind of ['CT', 'DX'])
       const firstFrameMs = Number(await iframe.getAttribute('data-first-frame-ms'));
       expect(firstFrameMs).toBeLessThan(60000);
       await expect(child.locator('canvas').first()).toBeVisible();
-      await iframe.screenshot({ path: 'artifacts/viewer-' + kind.toLowerCase() + '.png' });
+      await iframe.screenshot({ path: 'artifacts/run/viewer-' + kind.toLowerCase() + '.png' });
       expect(
         await child
           .locator('body')
