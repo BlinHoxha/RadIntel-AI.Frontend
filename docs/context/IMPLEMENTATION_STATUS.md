@@ -101,7 +101,9 @@ Backend still targets .NET 9 via its own pin; runtime/dependency support and sec
 
 ## Git preservation snapshot
 
-Backend branch: master. HEAD: 52a42eddefc7b78c0b879942d817856a462dbeae. No staged changes were introduced by this handoff. The frontend has no .git directory/repository.
+Historical pre-RI-CKPT-001 snapshot: backend branch master, HEAD 52a42eddefc7b78c0b879942d817856a462dbeae. No staged changes were introduced by that handoff. Current state: backend and frontend are Git repositories on task/RI-CKPT-001-checkpoint-m04-m06c; backend implementation remains uncommitted pending review and owner approval for commit, merge and push. Frontend HEAD is ab3a800386e43bff0dfa2cf64f962bce7f24f1a0.
+
+11 November 2026, RI-CKPT-001 checkpoint: the backend's 17 modified and 44 untracked files matched the approved fingerprint. Four offline restores, 89 ordinary backend tests, the OpenAPI snapshot check, frontend npm ci, lint, Git-tracked-file Prettier check, typecheck and generated-contract check passed. Seven original PDF hashes matched. The production dependency audit reported two moderate and one high vulnerability; no dependency was changed. Frontend unit tests, build, demo/browser, PostgreSQL/API and viewer checks were not runnable in this sandbox and await the reviewer outside it. Framework c146f854981305aad52d2df638834e3bfa39b2a1 and AI-Framework 84baaf4be2fc0a71b95690d51cde09807f0532d1 were used; Framework's existing documentation edit was preserved. No application database was changed.
 
 The following is the backend short-status inventory captured immediately before writing these handoff documents. It includes earlier/user work and must not be discarded. This task additionally creates docs/context in the frontend, a backend pointer document and README links.
 

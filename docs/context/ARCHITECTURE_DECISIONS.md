@@ -2,6 +2,8 @@
 
 Recorded 30 October 2026. This is a consolidated decision index, not a new architecture or an implementation authorization. Existing detailed records remain authoritative: [v2 assessment](../09_V2_Gap_Assessment_and_Implementation_Plan.md), [foundation](../10_Foundation_Implementation_and_Local_Run.md), [M04](../11_M04_Server_Search_and_Order_Context.md), and [backend implementation](../../../RadIntel-AI/docs/IMPLEMENTATION.md).
 
+11 November 2026, RI-CKPT-001 Git and verification checkpoint: backend and frontend are Git repositories on task/RI-CKPT-001-checkpoint-m04-m06c, at 52a42eddefc7b78c0b879942d817856a462dbeae and ab3a800386e43bff0dfa2cf64f962bce7f24f1a0 respectively. Backend work remains uncommitted pending review and owner approval for commit, merge and push. Its fingerprint matched; four offline restores, 89 ordinary backend tests, OpenAPI, frontend npm ci, lint, Git-tracked-file Prettier, typecheck, generated-contract check and seven original PDF hashes passed. Production dependency audit reported two moderate and one high vulnerability. Frontend unit tests, build, demo/browser, PostgreSQL/API and viewer checks were not runnable in this sandbox and await the reviewer outside it. Framework c146f854981305aad52d2df638834e3bfa39b2a1 and AI-Framework 84baaf4be2fc0a71b95690d51cde09807f0532d1 were used; no application database was changed.
+
 ## Existing decisions to preserve
 
 | Area                 | Decision / implementation boundary                                                                                                                                                                                                                                                                                      |

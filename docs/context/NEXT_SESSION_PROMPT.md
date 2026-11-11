@@ -16,7 +16,9 @@ Read any applicable AGENTS.md, both READMEs, frontend docs/context/SESSION_HANDO
 
 This is not TaskMetric. Do not transfer Forge identity, M1/M2 meanings, PostgreSQL roles/databases, test counts or SDK choices from that project. Do not edit or revert TaskMetric during radiology work.
 
-Last inspected backend branch was master at 52a42eddefc7b78c0b879942d817856a462dbeae with substantial uncommitted/untracked work. The dedicated frontend was not a Git repository. Inspect actual state first and preserve every existing change. Do not commit, push, merge, initialize Git, switch branches, deploy or apply application schema without an appropriate explicit instruction.
+RI-CKPT-001 uses task/RI-CKPT-001-checkpoint-m04-m06c in both Git repositories. Backend HEAD is 52a42eddefc7b78c0b879942d817856a462dbeae with fingerprinted uncommitted implementation work; frontend HEAD is ab3a800386e43bff0dfa2cf64f962bce7f24f1a0. Inspect actual state first and preserve every existing change. Commit, merge and push remain subject to separate owner approvals; do not deploy or apply application schema without an appropriate explicit instruction.
+
+11 November 2026, RI-CKPT-001 checkpoint: the backend fingerprint matched; four offline restores, 89 ordinary backend tests, OpenAPI, frontend npm ci, lint, Git-tracked-file Prettier, typecheck and generated-contract checks passed. Seven original PDF hashes matched. Production dependency audit reported two moderate and one high vulnerability. Frontend unit tests, build, demo/browser, PostgreSQL/API and viewer checks were not runnable in this sandbox and await the reviewer's run outside it. Framework c146f854981305aad52d2df638834e3bfa39b2a1 and AI-Framework 84baaf4be2fc0a71b95690d51cde09807f0532d1 were used; no application database was changed.
 
 The workflow/API and React UI already support patient/order management, claim/transition actions, manual reports, explicit revisions/review/signing, addenda/signed-text export, checked-text Verbatim proposals, templates, metadata-only PACS linkage, administration and audit. A01/A02/M01/M03 foundation and M04 search/context/token refresh are complete locally.
 

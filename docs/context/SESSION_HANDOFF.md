@@ -103,9 +103,11 @@ For later authorized validation, run npm.cmd run test:integration. Its default W
 
 ## Git and workspace state
 
-Backend is currently on **master**, HEAD 52a42eddefc7b78c0b879942d817856a462dbeae, with modified and untracked implementation work. The dedicated frontend directory is **not a Git repository**. Do not assume any delivered frontend/M04 work is committed, backed up remotely or represented by a feature branch.
+Backend and frontend are on **task/RI-CKPT-001-checkpoint-m04-m06c**. Backend HEAD is 52a42eddefc7b78c0b879942d817856a462dbeae, with 17 modified and 44 untracked implementation files before this handoff update. Frontend HEAD is ab3a800386e43bff0dfa2cf64f962bce7f24f1a0. The backend work remains uncommitted pending review and owner approval for commit, merge and push.
 
-Preserve the entire dirty backend and frontend. No commit, push, initialization, cleanup or branch switch was performed by this handoff. Review version-control/backup arrangements before any separately authorized publication. The pre-handoff backend inventory is saved in IMPLEMENTATION_STATUS.md.
+Preserve the existing backend work and the five RI-CKPT-001 handoff edits. The task branches were created with owner approval; this checkpoint did not commit, merge or push. The older backend inventory in IMPLEMENTATION_STATUS.md remains a historical snapshot.
+
+11 November 2026, RI-CKPT-001 checkpoint: the backend fingerprint matched before verification. Four offline restores, 89 ordinary backend tests, the OpenAPI snapshot check, frontend npm ci, lint, Git-tracked-file Prettier check, typecheck and generated-contract check passed. All seven original PDF hashes matched. The production dependency audit reported two moderate and one high vulnerability; no dependency was changed. Frontend unit tests, build, demo/browser, PostgreSQL/API and viewer checks were not runnable in this sandbox and await the reviewer's run outside it. Framework c146f854981305aad52d2df638834e3bfa39b2a1 and AI-Framework 84baaf4be2fc0a71b95690d51cde09807f0532d1 were used; Framework's existing documentation edit was preserved. No application database was changed.
 
 ## Next steps in order
 
