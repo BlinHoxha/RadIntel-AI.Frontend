@@ -68,6 +68,8 @@ Previous implementation: [M06B scoped viewer transport and identity proof](docs/
 
 ## Optional local synthetic viewer proof
 
+Next planning record: [M07 viewer acceptance plan](docs/18_M07_Viewer_Acceptance_Plan.md). It proposes tools, geometry fixtures, performance checks and clinical gates; the current proof remains bounded synthetic rendering.
+
 M06C uses a separately hosted, pinned OHIF artifact and the scoped M06B transport. This is a synthetic proof, not a clinically accepted diagnostic viewer. Default UI behavior is unchanged unless explicitly enabled.
 
 Prepare once:

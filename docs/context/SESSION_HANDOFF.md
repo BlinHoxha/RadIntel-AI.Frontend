@@ -1,13 +1,13 @@
 # RadIntel AI session handoff
 
-Updated 2 November 2026, Europe/Budapest. Covers the current backend and React frontend through M06C synthetic rendering proof; current results and limits are recorded below. The initial handoff was documentation-only; subsequent authorized increments change production code. Current verification is recorded in the checkpoint and M05B record; historical counts below remain dated.
+Updated 12 November 2026, Europe/Budapest. Covers the current backend and React frontend through M06C synthetic rendering proof, the integrated dependency refresh and the M07A acceptance plan. Current results and limits are recorded below; historical counts remain dated.
 
 ## Scope and current position
 
 - Backend: C:\Users\blinh\source\repos\RadIntel-AI.
 - Frontend: C:\Users\blinh\source\repos\RadIntel-AI.Frontend.
 - Shared dependencies: sibling Framework and AI-Framework checkouts; their reference hosts are not the product.
-- Latest source increment: **M06C pinned OHIF synthetic rendering proof**; locally verified; next is M07 tools and acceptance.
+- Latest source increment: **M06C pinned OHIF synthetic rendering proof**, followed by integrated RI-DEPS-001 dependency upgrades. [M07A acceptance planning](../18_M07_Viewer_Acceptance_Plan.md) is the current documentation increment.
 - M06A assessment, M06B transport and M06C bounded rendering proof are delivered; next is M07 acceptance/tools. Local M05B application review and M02 identity inputs remain outstanding.
 - Release dependency still open: **M02 institutional authentication and deployment security**.
 
@@ -103,13 +103,11 @@ For later authorized validation, run npm.cmd run test:integration. Its default W
 
 ## Git and workspace state
 
-Backend and frontend are on **task/RI-CKPT-001-checkpoint-m04-m06c**. Backend HEAD is 52a42eddefc7b78c0b879942d817856a462dbeae, with 17 modified and 44 untracked implementation files before this handoff update. Frontend HEAD is ab3a800386e43bff0dfa2cf64f962bce7f24f1a0. The backend work remains uncommitted pending review and owner approval for commit, merge and push.
+Current Git state: backend `master` @ 39ffcd3 and frontend `main` @ cc85093 are integrated and pushed. Both hosted GitHub validation runs are green (backend run 1, frontend run 3). RI-CKPT-001 and RI-DEPS-001 are integrated. M07A is being prepared on `task/RI-M07A-viewer-acceptance-plan` from frontend cc85093. The older inventory in IMPLEMENTATION_STATUS.md is a historical snapshot.
 
-Preserve the existing backend work and the five RI-CKPT-001 handoff edits. The task branches were created with owner approval; this checkpoint did not commit, merge or push. The older backend inventory in IMPLEMENTATION_STATUS.md remains a historical snapshot.
+11 November 2026, RI-CKPT-001 and RI-DEPS-001 integrated checkpoints: the backend work and frontend dependency upgrade were independently reviewed, committed and pushed. The RI-DEPS-001 reviewer run passed 89 ordinary backend tests, 5 PostgreSQL tests, 54 frontend tests, 6 demo browser scenarios, 7 actual API browser scenarios and 3 viewer browser scenarios, plus build. Zod 4.6.7, React Router DOM 7.18.5 and @hookform/resolvers 5.9.2 are installed; react-hook-form remains 7.91.0. Production dependency audit found zero vulnerabilities at the high-severity gate. This is the latest complete application test record; it was not rerun for M07A.
 
-11 November 2026, RI-CKPT-001 checkpoint: the backend fingerprint matched before verification. Four offline restores, 89 ordinary backend tests, the OpenAPI snapshot check, frontend npm ci, lint, Git-tracked-file Prettier check, typecheck and generated-contract check passed. All seven original PDF hashes matched. The production dependency audit reported two moderate and one high vulnerability; no dependency was changed. Frontend unit tests, build, demo/browser, PostgreSQL/API and viewer checks were not runnable in this sandbox and await the reviewer's run outside it. Framework c146f854981305aad52d2df638834e3bfa39b2a1 and AI-Framework 84baaf4be2fc0a71b95690d51cde09807f0532d1 were used; Framework's existing documentation edit was preserved. No application database was changed.
-
-11 November 2026, RI-DEPS-001 checkpoint: the frontend task branch resumes the approved second-reopening fingerprint at ef17e4c. Zod 4.6.7, React Router DOM 7.18.5 and @hookform/resolvers 5.9.2 are installed; existing v7 router imports remain valid, and the forms retain their previous visible string-length validation messages. Browser screenshots now target ignored `artifacts/run/`; both CI Playwright install steps have a five-minute timeout. npm ci, lint, typecheck, contracts check, tracked-file Prettier and the production high-severity audit passed in the sandbox (zero production vulnerabilities). The four context documents have LF line endings; the two untouched documents retain their Git content. Third-reopening lockfile regeneration kept react-hook-form 7.91.0; the lockfile matches the approved package changes and allowed ajv/json-schema-traverse relocations. npm ci, lint, typecheck, contracts check, tracked-file Prettier and the production high-severity audit passed again in the sandbox (zero production vulnerabilities). Unit tests, build, demo browsers, backend/PostgreSQL/API integration and viewer checks were not runnable in this sandbox and await the reviewer's run outside it. Screenshot output and tracked-file cleanliness after browser runs also await that review.
+12 November 2026, RI-M07A documentation checkpoint: [viewer acceptance plan](../18_M07_Viewer_Acceptance_Plan.md) specifies proposed tools, layout, geometry fixtures, safety warnings, performance measurements, clinical review and bounded M07B–M07D increments. No viewer behavior or clinical outcome was newly verified, and no application tests were run for this documentation-only change.
 
 ## Next steps in order
 
