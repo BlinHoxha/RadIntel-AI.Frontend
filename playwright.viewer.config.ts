@@ -1,4 +1,10 @@
 import { defineConfig } from '@playwright/test';
+// Hosted CI uses bundled Chromium. Owner-supported browsers run locally on request, for example
+// RADINTEL_VIEWER_CHANNELS=chrome,msedge npm run test:integration:viewer.
+const channels = (process.env.RADINTEL_VIEWER_CHANNELS || '')
+  .split(',')
+  .map((name) => name.trim())
+  .filter((name) => ['chrome', 'msedge'].includes(name));
 export default defineConfig({
   testDir: './e2e-viewer',
   outputDir: './test-results/viewer',
@@ -22,5 +28,10 @@ export default defineConfig({
       RADINTEL_API_TARGET: process.env.RADINTEL_TEST_API_URL || 'http://127.0.0.1:5305',
     },
   },
-  projects: [{ name: 'viewer-chromium', use: { browserName: 'chromium' } }],
+  projects: channels.length
+    ? channels.map((channel) => ({
+        name: 'viewer-' + channel,
+        use: { browserName: 'chromium' as const, channel },
+      }))
+    : [{ name: 'viewer-chromium', use: { browserName: 'chromium' } }],
 });

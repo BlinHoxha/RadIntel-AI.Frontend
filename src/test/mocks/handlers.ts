@@ -14,6 +14,19 @@ import type {
   Version,
 } from '../../shared/api/types';
 export const facilityId = '10000000-0000-4000-8000-000000000001';
+// Opt-in viewer proof fixtures: CT chest and X-ray chest keep the original images; CT abdomen &
+// pelvis shows the geometry study, CT head the identity mismatch and the X-ray wrist a frame in an
+// unsupported transfer syntax.
+const viewerKind = (order: Order) =>
+  order.modality !== 'CT'
+    ? order.bodyRegion === 'Left wrist'
+      ? 'TSYNTAX'
+      : 'DX'
+    : order.bodyRegion === 'Abdomen & pelvis'
+      ? 'GEO'
+      : order.bodyRegion === 'Head'
+        ? 'MISMATCH'
+        : 'CT';
 const userId = 'demo.radiologist';
 const id = (n: number) => `20000000-0000-4000-8000-${String(n).padStart(12, '0')}`;
 const entity = (n: number) => ({
@@ -489,10 +502,12 @@ export const handlers = [
       const order = orders.find((item) => id(8000 + Number(item.id.slice(-4))) === studyId);
       if (!order) return problem(404);
       if (!(roles & 4) && !(clinical && order.assignedTo === userId)) return problem(403);
-      const kind = order.modality === 'CT' ? 'CT' : 'DX';
+      const kind = viewerKind(order);
       const context = demoContext(kind, studyId);
       if (action === 'dicomweb') return HttpResponse.json(fixture(kind).instances);
       if (action === 'viewer-frames' && method === 'POST') {
+        // Mirrors the backend rejecting a frame in an unsupported transfer syntax.
+        if (fixture(kind).transferSyntax) return problem(503);
         const index = context.instances.findIndex(
           (entry) =>
             entry.sopInstanceUid === body.sopInstanceUid &&
@@ -515,7 +530,7 @@ export const handlers = [
         const studyId = id(8000 + Number(order.id.slice(-4)));
         if (body.studyId !== studyId || !['CT', 'DX', 'XR'].includes(order.modality))
           return problem(404);
-        return HttpResponse.json(demoContext(order.modality === 'CT' ? 'CT' : 'DX', studyId));
+        return HttpResponse.json(demoContext(viewerKind(order), studyId));
       }
       if (action === 'studies') {
         if (!(roles & 4) && !(clinical && order.assignedTo === userId)) return problem(403);
@@ -528,8 +543,7 @@ export const handlers = [
                       ...entity(8000 + Number(order.id.slice(-4))),
                       orderId: order.id,
                       archiveKey: 'SYNTHETIC-VIEWER-PROOF',
-                      studyInstanceUid: fixture(order.modality === 'CT' ? 'CT' : 'DX')
-                        .studyInstanceUid,
+                      studyInstanceUid: fixture(viewerKind(order)).studyInstanceUid,
                       verifiedBy: userId,
                     },
                   ]

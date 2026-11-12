@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import dicomParser from 'dicom-parser';
 import { createHash } from 'node:crypto';
 import { dicom } from '../../../viewer/dicom.mjs';
-import { demoContext, pixels } from '../../../viewer/synthetic.mjs';
+import { demoContext, fixture, fixtureKinds, pixels } from '../../../viewer/synthetic.mjs';
 import fixtures from '../../../viewer/fixtures.lock.json';
 const studyId = '10000000-0000-4000-8000-000000000003';
 describe('proof Part 10 adapter interoperability', () => {
@@ -35,11 +35,44 @@ describe('proof Part 10 adapter interoperability', () => {
   it('rejects truncated raw data before creating a DICOM object', () => {
     expect(() => dicom(demoContext('CT', studyId).instances[0], new ArrayBuffer(2))).toThrow();
   });
-  it.each(['CT', 'DX'] as const)('matches the pinned generated %s pixel fixture hashes', (kind) => {
-    const context = demoContext(kind, studyId);
-    const hashes = context.instances.map((_, index) =>
-      createHash('sha256').update(pixels(index, kind)).digest('hex'),
+  it.each(['CT', 'DX', 'GEO'] as const)(
+    'matches the pinned generated %s pixel fixture hashes',
+    (kind) => {
+      const context = demoContext(kind, studyId);
+      const hashes = context.instances.map((entry, index) =>
+        entry.supported ? createHash('sha256').update(pixels(index, kind)).digest('hex') : null,
+      );
+      expect(hashes).toEqual(fixtures.fixtures[kind].pixelSha256);
+    },
+  );
+  it.each(fixtureKinds)('regenerates identical %s metadata matching the manifest', (kind) => {
+    const first = JSON.stringify(fixture(kind).instances);
+    expect(JSON.stringify(fixture(kind).instances)).toBe(first);
+    expect(createHash('sha256').update(first).digest('hex')).toBe(
+      fixtures.fixtures[kind as keyof typeof fixtures.fixtures].metadataSha256,
     );
-    expect(hashes).toEqual(fixtures.fixtures[kind].pixelSha256);
+  });
+  it('classifies geometry fixtures like the backend proof profile', () => {
+    const context = demoContext('GEO', studyId);
+    expect(context.instances.map((entry) => [entry.supported, entry.frames])).toEqual([
+      [true, 1],
+      [true, 1],
+      [true, 1],
+      [true, 1],
+      [true, 1],
+      [true, 1],
+      [false, 2],
+      [false, 1],
+    ]);
+    expect(context.instances[3].pixelSpacing).toEqual([0.5, 1]);
+    expect(context.instances[5].pixelSpacing).toBeNull();
+    const mismatch = demoContext('MISMATCH', studyId);
+    expect(mismatch.instances[1].studyInstanceUid).not.toBe(mismatch.studyInstanceUid);
+  });
+  it('carries anisotropic 0.5 x 1.0 mm spacing and coronal orientation through the wrapper', () => {
+    const entry = demoContext('GEO', studyId).instances[3];
+    const parsed = dicomParser.parseDicom(new Uint8Array(dicom(entry, pixels(3, 'GEO').buffer)));
+    expect(parsed.string('x00280030')).toBe('0.5\\1');
+    expect(parsed.string('x00200037')).toBe('1\\0\\0\\0\\0\\-1');
   });
 });

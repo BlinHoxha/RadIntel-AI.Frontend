@@ -20,6 +20,7 @@
     "viewer:prepare": "node scripts/prepare-viewer.mjs",
     "viewer:serve": "node scripts/serve-viewer.mjs",
     "test:e2e:viewer": "playwright test --config playwright.viewer.config.ts",
+    "test:e2e:viewer-demo": "playwright test --config playwright.viewer-demo.config.ts",
     "test:integration:viewer": "node scripts/run-integration.mjs --browser-only --viewer"
   },
   "dependencies": {

@@ -108,6 +108,7 @@ export async function startViewerServer({
 }
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   const viewer = await startViewerServer({
+    port: Number(process.env.RADINTEL_VIEWER_PORT || 5184),
     parentOrigin: process.env.RADINTEL_VIEWER_PARENT_ORIGIN || 'http://127.0.0.1:5173',
   });
   console.log(

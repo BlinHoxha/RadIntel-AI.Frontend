@@ -52,6 +52,10 @@
         dispose();
         return;
       }
+      if (data?.type === 'navigate') {
+        navigate(data.index);
+        return;
+      }
       const waiter = pending.get(data?.id);
       if (!waiter) return;
       pending.delete(data.id);
@@ -78,6 +82,7 @@
     if (disposed) return;
     disposed = true;
     clearInterval(timer);
+    clearInterval(watcher);
     context = undefined;
     pending.forEach((waiter) => {
       clearTimeout(waiter.timer);
@@ -88,6 +93,36 @@
     document.getElementById('root')?.replaceChildren();
   }
   window.addEventListener('pagehide', dispose);
+  const frameUrl = (index) => 'dicomweb:' + location.origin + '/radintel-frame/' + index;
+  const frameIndex = (imageId) => {
+    const match = /\/radintel-frame\/(\d+)(?:$|[?&#/])/.exec(String(imageId || ''));
+    return match ? Number(match[1]) : undefined;
+  };
+  let shown;
+  // Reports the image on the main viewport so the parent labels it from its own checked
+  // metadata. Polling avoids OHIF thumbnail viewports, which emit the same render events.
+  let renderedSent = false;
+  const watcher = setInterval(() => {
+    if (disposed) return;
+    try {
+      // Fallback for the render signal: OHIF does not always deliver its render event to the
+      // document, so a sized main viewport holding image data also counts as rendered.
+      if (!renderedSent && delivered) {
+        const viewport = stackViewports()[0];
+        const box = viewport?.element?.getBoundingClientRect();
+        if (viewport?.getImageData?.() && box && box.width > 32 && box.height > 32) {
+          renderedSent = true;
+          channel?.postMessage({ type: 'rendered' });
+        }
+      }
+      const index = delivered ? currentFrame() : undefined;
+      if (index === undefined || index === shown || !context?.instances[index]) return;
+      shown = index;
+      channel?.postMessage({ type: 'displayed', index });
+    } catch {
+      // Labels stay on the last confirmed image; the parent never infers identity.
+    }
+  }, 200);
   document.addEventListener(
     'CORNERSTONE_IMAGE_RENDERED',
     (event) => {
@@ -99,12 +134,82 @@
         target.isConnected &&
         target.getBoundingClientRect().width > 32 &&
         target.getBoundingClientRect().height > 32
-      )
+      ) {
         channel?.postMessage({ type: 'rendered' });
+      }
     },
     true,
   );
-  function natural(entry, index) {
+  function stackViewports() {
+    const engines = window.cornerstone?.getRenderingEngines?.() || [];
+    // Thumbnail viewports have no image list; only the main stack viewport counts.
+    return engines
+      .flatMap((engine) => engine.getViewports())
+      .filter((v) => v.getImageIds && v.getImageIds().length > 0);
+  }
+  // OHIF may wrap our frame URL in its own image-ID scheme, so match on the frame index.
+  function showFrame(index) {
+    for (const viewport of stackViewports()) {
+      const position = viewport.getImageIds().findIndex((id) => frameIndex(id) === index);
+      if (position >= 0) {
+        viewport.setImageIdIndex(position);
+        return true;
+      }
+    }
+    return false;
+  }
+  // Parent-driven navigation within the scoped context only: same-series slice changes use the
+  // stack; a series change loads that series' display set into the active viewport first.
+  function currentFrame() {
+    for (const viewport of stackViewports()) {
+      const index = frameIndex(viewport.getCurrentImageId?.());
+      if (index !== undefined) return index;
+    }
+    return undefined;
+  }
+  const pause = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+  let navigation = 0;
+  // OHIF can reset its stack shortly after loading, so a request is re-applied until the target
+  // stays on screen for a settling window. A newer request supersedes an older one.
+  async function navigate(index) {
+    const entry = Number.isInteger(index) ? context?.instances[index] : undefined;
+    if (disposed || !entry) return;
+    const generation = ++navigation;
+    const deadline = Date.now() + 10000;
+    let switched = false;
+    let lastAttempt = 0;
+    let stableSince;
+    try {
+      while (!disposed && generation === navigation) {
+        const now = Date.now();
+        if (currentFrame() === index) {
+          stableSince ??= now;
+          if (now - stableSince >= 1500) return;
+        } else {
+          stableSince = undefined;
+          if (now > deadline) throw new Error('Navigation timed out.');
+          if (now - lastAttempt >= 1000 && !showFrame(index) && !switched) {
+            const services = window.services;
+            const displaySet = services?.displaySetService
+              ?.getActiveDisplaySets()
+              .find((set) => set.SeriesInstanceUID === entry.seriesInstanceUid);
+            if (!displaySet) throw new Error('Series unavailable.');
+            services.viewportGridService.setDisplaySetsForViewport({
+              viewportId: services.viewportGridService.getActiveViewportId(),
+              displaySetInstanceUIDs: [displaySet.displaySetInstanceUID],
+            });
+            switched = true;
+          }
+          if (now - lastAttempt >= 1000) lastAttempt = now;
+        }
+        await pause(100);
+      }
+    } catch {
+      if (!disposed && generation === navigation)
+        channel?.postMessage({ type: 'navigate-failed', index });
+    }
+  }
+  function natural(entry, index, number) {
     const ct = entry.sopClassUid === '1.2.840.10008.5.1.4.1.1.2';
     return {
       metadata: {
@@ -121,7 +226,7 @@
         BitsStored: 16,
         HighBit: 15,
         PixelRepresentation: 0,
-        InstanceNumber: index + 1,
+        InstanceNumber: number,
         ...(entry.rescaleSlope !== null ? { RescaleSlope: entry.rescaleSlope } : {}),
         ...(entry.rescaleIntercept !== null ? { RescaleIntercept: entry.rescaleIntercept } : {}),
         ...(entry.pixelSpacing ? { PixelSpacing: entry.pixelSpacing } : {}),
@@ -130,7 +235,7 @@
           : {}),
         ...(entry.imagePositionPatient ? { ImagePositionPatient: entry.imagePositionPatient } : {}),
       },
-      url: 'dicomweb:' + location.origin + '/radintel-frame/' + index,
+      url: frameUrl(index),
     };
   }
   window.fetch = async (input, options) => {
@@ -138,10 +243,11 @@
     if (url.origin === location.origin && url.pathname === '/radintel-context.json') {
       context = await rpc('context');
       const groups = new Map();
+      // The parent sends displayable instances only, grouped by series in verified order.
       context.instances.forEach((entry, index) => {
         if (!entry.supported) return;
         const group = groups.get(entry.seriesInstanceUid) || [];
-        group.push(natural(entry, index));
+        group.push(natural(entry, index, group.length + 1));
         groups.set(entry.seriesInstanceUid, group);
       });
       return new Response(

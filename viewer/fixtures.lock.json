@@ -12,6 +12,25 @@
     "DX": {
       "metadataSha256": "7aa86c517bc4dd34ddcd09892416427ebe8053d677d1e40cd14bfc1b98f7d1aa",
       "pixelSha256": ["71ed8262a9e82260038ea27a07da7c475af1207bd32ea7d7b2f32ed4be1ef16b"]
+    },
+    "GEO": {
+      "metadataSha256": "c98abe048d8af514c74e2f4233f49b2a71def815d85028be86374d8eb68bac41",
+      "pixelSha256": [
+        "9974444a6b044e71cec0ea261724fa2fdebe4fdb97d31ee8da6e3cc35ee7e16f",
+        "8487a4b8624a60645756b114f0433f0cb78ba09f270f9b408b0ab5db45d01118",
+        "01d6c21f2a6ef74c1058d840b9179e5221359b09087106516dadeabbfc2c679d",
+        "3de2153d50fdf7ed441d559652f03e0b59211b915e038376104b77410514688f",
+        "9a2f19193c9bdc7311c4838b687da18d8eee9b2b8486225c6d7aef06dc3ebc0f",
+        "58f518097465ff203b9e0ed5536c9e2ee7909e4a1d1db2c37e08bbb84f238781",
+        null,
+        null
+      ]
+    },
+    "MISMATCH": {
+      "metadataSha256": "21b04dc6ad84ae47c5ca0fd9fab999edcd48fda91069660e9186d942a5f2cb34"
+    },
+    "TSYNTAX": {
+      "metadataSha256": "a62096b21f37f7a5e9515e5e078038d7abaffc51233aa851256b635e0369c3c5"
     }
   }
 }

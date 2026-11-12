@@ -1,8 +1,25 @@
 import { useEffect, useRef, useState } from 'react';
 import { createViewerTransport } from './viewerTransport';
-import { onContextInvalidated } from '../../shared/api/client';
+import { ApiError, onContextInvalidated } from '../../shared/api/client';
+import {
+  displayContext,
+  formatPosition,
+  formatSpacing,
+  planViewer,
+  type PlannedImage,
+  type ViewerPlan,
+} from './geometry';
 
 import { proofOrigin } from './viewerProofConfig';
+const UNAVAILABLE =
+  'Viewer proof unavailable. Close it and retry. Manual reporting remains available.';
+const UNVERIFIED =
+  'Viewer unavailable: the image identity or format could not be verified. Manual reporting remains available.';
+const FORMAT =
+  'Image could not be shown: unsupported image format or image service unavailable. Manual reporting remains available.';
+const NO_IMAGES = 'No supported images to show in this study. Manual reporting remains available.';
+class NoDisplayableImages extends Error {}
+class FrameUnavailable extends Error {}
 export default function ViewerProof({
   facilityId,
   orderId,
@@ -15,26 +32,45 @@ export default function ViewerProof({
   onClose: () => void;
 }) {
   const frame = useRef<HTMLIFrameElement>(null);
+  const portRef = useRef<MessagePort | undefined>(undefined);
   const [nonce] = useState(() => crypto.randomUUID());
   const [origin] = useState(proofOrigin);
   const [status, setStatus] = useState('Connecting to the local viewer proof...');
   const [failed, setFailed] = useState(false);
+  const [plan, setPlan] = useState<ViewerPlan>();
+  const [shown, setShown] = useState<number>();
+  const [notice, setNotice] = useState('');
   useEffect(() => {
     const transport = createViewerTransport(facilityId, orderId, studyId);
     const started = performance.now();
     let rendered = false;
     let disposed = false;
     let port: MessagePort | undefined;
-    const context = transport.loadContext();
-    const fail = () => {
+    const context = transport.loadContext().then((checked) => {
+      const planned = planViewer(checked);
+      if (!planned.images.length) throw new NoDisplayableImages();
+      if (!disposed) setPlan(planned);
+      return displayContext(checked, planned);
+    });
+    const fail = (error?: unknown) => {
       if (disposed) return;
       setFailed(true);
       setStatus(
-        'Viewer proof unavailable. Close it and retry. Manual reporting remains available.',
+        error instanceof NoDisplayableImages
+          ? NO_IMAGES
+          : error instanceof FrameUnavailable
+            ? FORMAT
+            : error instanceof ApiError && error.status === 503 && contextFailed
+              ? UNVERIFIED
+              : UNAVAILABLE,
       );
       cleanup();
     };
-    context.catch(fail);
+    let contextFailed = false;
+    context.catch((error) => {
+      contextFailed = true;
+      fail(error);
+    });
     const timeout = setTimeout(fail, 60000);
     function cleanup() {
       if (disposed) return;
@@ -43,10 +79,11 @@ export default function ViewerProof({
       transport.dispose();
       port?.postMessage({ type: 'dispose' });
       port?.close();
+      portRef.current = undefined;
       unsubscribe();
       window.removeEventListener('message', connect);
     }
-    const unsubscribe = onContextInvalidated(fail);
+    const unsubscribe = onContextInvalidated(() => fail());
     function connect(event: MessageEvent) {
       if (
         disposed ||
@@ -59,14 +96,33 @@ export default function ViewerProof({
         return;
       const pair = new MessageChannel();
       port = pair.port1;
+      portRef.current = port;
       setStatus('Loading the verified synthetic study...');
       port.onmessage = async ({ data }) => {
         if (disposed) return;
         if (data?.type === 'frame-delivered') return;
+        if (data?.type === 'displayed' || data?.type === 'navigate-failed') {
+          const checked = await context.catch(() => undefined);
+          if (disposed || !checked) return;
+          if (
+            !Number.isInteger(data.index) ||
+            data.index < 0 ||
+            data.index >= checked.instances.length
+          )
+            return;
+          if (data.type === 'displayed') {
+            setShown(data.index);
+            setNotice('');
+          } else
+            setNotice('Navigation unavailable for that image. The current image is unchanged.');
+          return;
+        }
         if (data?.type === 'rendered') {
           if (rendered) return;
           rendered = true;
           clearTimeout(timeout);
+          // Start at planned slice 1 of series 1, whatever image OHIF chose to show first.
+          port?.postMessage({ type: 'navigate', index: 0 });
           setStatus('Synthetic frame rendered - not for diagnostic use.');
           frame.current?.setAttribute('data-rendered', 'true');
           frame.current?.setAttribute(
@@ -92,10 +148,16 @@ export default function ViewerProof({
             const pixels = await transport.frame(checked.instances[data.index].sopInstanceUid);
             if (!disposed) port?.postMessage({ id: data.id, value: pixels }, [pixels]);
           } else throw new Error('Invalid scoped viewer operation.');
-        } catch {
+        } catch (error) {
           if (!disposed) {
             port?.postMessage({ id: data.id, error: true });
-            fail();
+            // The backend rejects an unsupported transfer syntax only when pixels are requested and
+            // reports it as 503, the same status as an unavailable image service.
+            fail(
+              data.operation === 'frame' && error instanceof ApiError && error.status === 503
+                ? new FrameUnavailable()
+                : undefined,
+            );
           }
         }
       };
@@ -106,6 +168,13 @@ export default function ViewerProof({
     window.addEventListener('message', connect);
     return cleanup;
   }, [facilityId, orderId, studyId, nonce, origin]);
+  const current: PlannedImage | undefined = shown === undefined ? undefined : plan?.images[shown];
+  const series = current && plan?.series[current.seriesNumber - 1];
+  const navigate = (image: PlannedImage | undefined) => {
+    if (!image) return;
+    setNotice('');
+    portRef.current?.postMessage({ type: 'navigate', index: image.displayIndex });
+  };
   return (
     <section className="viewer-proof" aria-label="Synthetic OHIF viewer proof">
       <div className="viewer-proof-header">
@@ -115,6 +184,90 @@ export default function ViewerProof({
         </button>
       </div>
       <p role={failed ? 'alert' : 'status'}>{status}</p>
+      {!failed &&
+        plan &&
+        (plan.warnings.length > 0 || plan.series.some((s) => s.warnings.length)) && (
+          <ul aria-label="Viewer warnings" className="viewer-warnings">
+            {plan.warnings.map((warning) => (
+              <li key={warning}>{warning}</li>
+            ))}
+            {plan.series.flatMap((s) =>
+              s.warnings.map((warning) => (
+                <li key={s.number + warning}>{'Series ' + s.number + ': ' + warning}</li>
+              )),
+            )}
+          </ul>
+        )}
+      {!failed && plan && (
+        <div className="viewer-navigation" aria-label="Viewer navigation" role="group">
+          <label>
+            Series
+            <select
+              value={current?.seriesNumber ?? ''}
+              disabled={current === undefined}
+              onChange={(event) => navigate(plan.series[Number(event.target.value) - 1]?.images[0])}
+            >
+              {current === undefined && <option value="">Loading…</option>}
+              {plan.series.map((s) => (
+                <option key={s.seriesInstanceUid} value={s.number}>
+                  {'Series ' +
+                    s.number +
+                    ' (' +
+                    s.images.length +
+                    (s.images.length === 1 ? ' image)' : ' images)')}
+                </option>
+              ))}
+            </select>
+          </label>
+          <button
+            type="button"
+            disabled={!current || !series || current.slice <= 1}
+            onClick={() => navigate(series?.images[current!.slice - 2])}
+          >
+            Previous slice
+          </button>
+          <button
+            type="button"
+            disabled={!current || !series || current.slice >= current.sliceCount}
+            onClick={() => navigate(series?.images[current!.slice])}
+          >
+            Next slice
+          </button>
+        </div>
+      )}
+      {!failed && current && (
+        <dl aria-label="Displayed image" className="viewer-identity">
+          <dt>Series</dt>
+          <dd data-testid="viewer-series">{current.seriesInstanceUid}</dd>
+          <dt>Image</dt>
+          <dd data-testid="viewer-image">{current.sopInstanceUid}</dd>
+          <dt>Slice</dt>
+          <dd data-testid="viewer-slice">
+            {current.slice +
+              ' of ' +
+              current.sliceCount +
+              (current.orderVerified ? '' : ' (order unverified)')}
+          </dd>
+          <dt>Position</dt>
+          <dd data-testid="viewer-position">{formatPosition(current.position)}</dd>
+          <dt>Orientation</dt>
+          <dd data-testid="viewer-orientation">
+            {current.orientation
+              ? 'Left ' +
+                current.orientation.left +
+                ', right ' +
+                current.orientation.right +
+                ', top ' +
+                current.orientation.top +
+                ', bottom ' +
+                current.orientation.bottom
+              : 'Orientation unavailable'}
+          </dd>
+          <dt>Pixel spacing</dt>
+          <dd data-testid="viewer-spacing">{formatSpacing(current.pixelSpacing)}</dd>
+        </dl>
+      )}
+      {notice && <p role="alert">{notice}</p>}
       {!failed && (
         <iframe
           ref={frame}

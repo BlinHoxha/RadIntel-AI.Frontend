@@ -1,7 +1,7 @@
 import { createServer } from 'node:http';
-import { fixture, pixels } from '../viewer/synthetic.mjs';
+import { fixture, fixtureKinds, pixels } from '../viewer/synthetic.mjs';
 export async function startSyntheticArchive() {
-  const sources = [fixture('CT'), fixture('DX')];
+  const sources = fixtureKinds.map((kind) => fixture(kind));
   const server = createServer((req, res) => {
     const url = new URL(req.url, 'http://localhost');
     const parts = url.pathname.split('/').filter(Boolean);
@@ -49,7 +49,8 @@ export async function startSyntheticArchive() {
     if (parts.length === 8 && parts[6] === 'frames' && parts[7] === '1') {
       res.setHeader(
         'Content-Type',
-        'multipart/related; type="application/octet-stream"; boundary=synthetic-proof',
+        'multipart/related; type="application/octet-stream"; boundary=synthetic-proof' +
+          (source.transferSyntax ? '; transfer-syntax=' + source.transferSyntax : ''),
       );
       res.end(
         Buffer.concat([
