@@ -18,6 +18,19 @@ const UNVERIFIED =
 const FORMAT =
   'Image could not be shown: unsupported image format or image service unavailable. Manual reporting remains available.';
 const NO_IMAGES = 'No supported images to show in this study. Manual reporting remains available.';
+// Owner-approved M07 tools (12 November 2026): no presets, angle or region of interest.
+const TOOLS = [
+  { id: 'WindowLevel', label: 'Window/level' },
+  { id: 'Zoom', label: 'Zoom' },
+  { id: 'Pan', label: 'Pan' },
+  { id: 'Length', label: 'Length' },
+] as const;
+type Tool = (typeof TOOLS)[number]['id'];
+interface Measurement {
+  index: number;
+  length: number;
+  unit: string;
+}
 class NoDisplayableImages extends Error {}
 class FrameUnavailable extends Error {}
 export default function ViewerProof({
@@ -40,6 +53,8 @@ export default function ViewerProof({
   const [plan, setPlan] = useState<ViewerPlan>();
   const [shown, setShown] = useState<number>();
   const [notice, setNotice] = useState('');
+  const [tool, setTool] = useState<Tool>('WindowLevel');
+  const [measurement, setMeasurement] = useState<Measurement | null>(null);
   useEffect(() => {
     const transport = createViewerTransport(facilityId, orderId, studyId);
     const started = performance.now();
@@ -117,6 +132,30 @@ export default function ViewerProof({
             setNotice('Navigation unavailable for that image. The current image is unchanged.');
           return;
         }
+        if (data?.type === 'tool-selected' || data?.type === 'tool-refused') {
+          const known = TOOLS.find((item) => item.id === data.tool);
+          if (!known) return;
+          if (data.type === 'tool-selected') setTool(known.id);
+          else setNotice('Measurement unavailable: pixel spacing missing');
+          return;
+        }
+        if (data?.type === 'view-reset') return;
+        if (data?.type === 'measurement') {
+          const checked = await context.catch(() => undefined);
+          if (disposed || !checked) return;
+          const value = data.value;
+          const valid =
+            value &&
+            Number.isInteger(value.index) &&
+            value.index >= 0 &&
+            value.index < checked.instances.length &&
+            Number.isFinite(value.length) &&
+            typeof value.unit === 'string';
+          setMeasurement(
+            valid ? { index: value.index, length: value.length, unit: value.unit } : null,
+          );
+          return;
+        }
         if (data?.type === 'rendered') {
           if (rendered) return;
           rendered = true;
@@ -170,6 +209,23 @@ export default function ViewerProof({
   }, [facilityId, orderId, studyId, nonce, origin]);
   const current: PlannedImage | undefined = shown === undefined ? undefined : plan?.images[shown];
   const series = current && plan?.series[current.seriesNumber - 1];
+  const choose = (id: Tool) => {
+    setNotice('');
+    portRef.current?.postMessage({ type: 'tool', tool: id });
+  };
+  // The readout describes only the image on screen: a length taken on another image is never
+  // shown next to an image it does not belong to (RI-M07C review finding).
+  const measuredImage = measurement ? plan?.images[measurement.index] : undefined;
+  const measurementText = !current?.pixelSpacing
+    ? 'Measurement unavailable: pixel spacing missing'
+    : !measurement || measurement.index !== current.displayIndex
+      ? 'No measurement on this image. Select Length and drag on the image.'
+      : measurement.unit === 'mm' && measuredImage?.pixelSpacing
+        ? 'Length: ' +
+          measurement.length.toFixed(1) +
+          ' mm on image ' +
+          measuredImage.sopInstanceUid
+        : 'Measurement unavailable: pixel spacing missing';
   const navigate = (image: PlannedImage | undefined) => {
     if (!image) return;
     setNotice('');
@@ -234,6 +290,27 @@ export default function ViewerProof({
             Next slice
           </button>
         </div>
+      )}
+      {!failed && current && (
+        <>
+          <div className="viewer-navigation" aria-label="Viewer tools" role="group">
+            {TOOLS.map((item) => (
+              <button
+                key={item.id}
+                type="button"
+                aria-pressed={tool === item.id}
+                disabled={item.id === 'Length' && !current.pixelSpacing}
+                onClick={() => choose(item.id)}
+              >
+                {item.label}
+              </button>
+            ))}
+            <button type="button" onClick={() => portRef.current?.postMessage({ type: 'reset' })}>
+              Reset view
+            </button>
+          </div>
+          <p data-testid="viewer-measurement">{measurementText}</p>
+        </>
       )}
       {!failed && current && (
         <dl aria-label="Displayed image" className="viewer-identity">

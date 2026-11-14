@@ -56,6 +56,14 @@
         navigate(data.index);
         return;
       }
+      if (data?.type === 'tool') {
+        selectTool(data.tool);
+        return;
+      }
+      if (data?.type === 'reset') {
+        resetView();
+        return;
+      }
       const waiter = pending.get(data?.id);
       if (!waiter) return;
       pending.delete(data.id);
@@ -101,10 +109,87 @@
   let shown;
   // Reports the image on the main viewport so the parent labels it from its own checked
   // metadata. Polling avoids OHIF thumbnail viewports, which emit the same render events.
+  // M07C: only owner-approved interactions. OHIF's toolbar, side panels and keyboard shortcuts
+  // are removed; the parent's controls select tools. Relies on pinned OHIF 3.11.1 internals:
+  // cornerstoneTools.ToolGroupManager ('default' group), annotation.state and viewport APIs.
+  const APPROVED_TOOLS = ['WindowLevel', 'Zoom', 'Pan', 'Length'];
+  const KEEP_ENABLED = new Set([...APPROVED_TOOLS, 'StackScroll', 'ImageOverlayViewer']);
+  const chrome = document.createElement('style');
+  chrome.textContent = [
+    '#root > div > div:has([data-cy="return-to-work-list"]),',
+    '#viewerLayoutResizableLeftPanel, #viewerLayoutResizableRightPanel,',
+    '[data-panel-resize-handle-id] { display: none !important; }',
+  ].join('\n');
+  document.head.appendChild(chrome);
+  // OHIF hotkeys could activate unapproved tools; all keyboard input stays with the parent.
+  for (const type of ['keydown', 'keyup', 'keypress'])
+    window.addEventListener(type, (event) => event.stopImmediatePropagation(), true);
+  let toolsReady = false;
+  let primaryTool = 'WindowLevel';
+  const toolGroup = () => window.cornerstoneTools?.ToolGroupManager?.getToolGroup?.('default');
+  function configureTools() {
+    const group = toolGroup();
+    if (toolsReady || !group) return;
+    for (const name of Object.keys(group.toolOptions || {}))
+      if (!KEEP_ENABLED.has(name)) group.setToolDisabled(name);
+    toolsReady = true;
+    selectTool('WindowLevel');
+    window.cornerstone?.getRenderingEngines?.().forEach((engine) => engine.resize(true, true));
+  }
+  function currentEntry() {
+    const index = currentFrame();
+    return index === undefined ? undefined : context?.instances[index];
+  }
+  function selectTool(name) {
+    const group = toolGroup();
+    if (disposed || !group || !APPROVED_TOOLS.includes(name)) return;
+    if (name === 'Length' && !currentEntry()?.pixelSpacing) {
+      channel?.postMessage({ type: 'tool-refused', tool: name });
+      return;
+    }
+    const active = group.getActivePrimaryMouseButtonTool?.();
+    if (active && active !== name) group.setToolPassive(active);
+    group.setToolActive(name, { bindings: [{ mouseButton: 1 }] });
+    primaryTool = name;
+    channel?.postMessage({ type: 'tool-selected', tool: name });
+  }
+  function resetView() {
+    for (const viewport of stackViewports()) {
+      viewport.resetCamera?.();
+      viewport.resetProperties?.();
+      viewport.render?.();
+    }
+    channel?.postMessage({ type: 'view-reset' });
+  }
+  let measured = '';
+  // Reports the most recent Length annotation; measurements live only in this child's memory.
+  function reportMeasurement() {
+    const all = window.cornerstoneTools?.annotation?.state?.getAllAnnotations?.() || [];
+    const lengths = all.filter((item) => item.metadata?.toolName === 'Length');
+    const last = lengths[lengths.length - 1];
+    const imageId = last?.metadata?.referencedImageId;
+    const stats = imageId ? last.data?.cachedStats?.['imageId:' + imageId] : undefined;
+    const index = frameIndex(imageId);
+    const value =
+      stats && Number.isFinite(stats.length) && index !== undefined && context?.instances[index]
+        ? { index, length: Math.round(stats.length * 10) / 10, unit: String(stats.unit) }
+        : null;
+    const key = JSON.stringify([lengths.length, value]);
+    if (key === measured) return;
+    measured = key;
+    channel?.postMessage({ type: 'measurement', count: lengths.length, value });
+  }
   let renderedSent = false;
   const watcher = setInterval(() => {
     if (disposed) return;
     try {
+      if (delivered) {
+        configureTools();
+        reportMeasurement();
+      }
+      // If navigation lands on an image without spacing, length measurement is withdrawn.
+      if (toolsReady && primaryTool === 'Length' && !currentEntry()?.pixelSpacing)
+        selectTool('WindowLevel');
       // Fallback for the render signal: OHIF does not always deliver its render event to the
       // document, so a sized main viewport holding image data also counts as rendered.
       if (!renderedSent && delivered) {

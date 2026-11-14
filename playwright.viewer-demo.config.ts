@@ -15,7 +15,8 @@ export default defineConfig({
   timeout: 90000,
   use: {
     baseURL: app,
-    viewport: { width: 1800, height: 1200 },
+    // Tall enough that the viewer below the panel controls is on screen for mouse input.
+    viewport: { width: 1800, height: 2600 },
     trace: 'off',
     screenshot: 'only-on-failure',
   },
