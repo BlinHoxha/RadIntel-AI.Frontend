@@ -113,6 +113,8 @@ Historical pre-RI-CKPT-001 snapshot: backend `master` @ 52a42ed with 17 modified
 
 14 November 2026, RI-CI-001 checkpoint: GitHub Frontend validation run 6 (fd0a0a0) failed in `api-integration` because its OpenAPI check ran from this frontend folder (no `global.json`) and picked the runner image's new .NET SDK 11.0.100, which failed with a static web assets error. The step now runs from `RadIntel-AI`, whose `global.json` pins SDK 9.0.308. No code or contract change; pending Codex review and owner commit/merge/push approval on `task/RI-CI-001-openapi-check-sdk`.
 
+14 November 2026, RI-DEPS-002 checkpoint: development tools upgraded — Vitest 3.2.7 to 5.1.0, ESLint and @eslint/js 9.22.0 to 9.39.5, typescript-eslint 8.26.0 to 8.72.2; Vite stays 6.4.5 and no runtime dependency changed. Full `npm audit` went from 12 findings (2 critical, 8 moderate, 2 low) to 7 moderate, all one `minimatch` (GHSA-g3hv-75wg-m249) chain inside typescript-eslint, whose latest release still requires `minimatch ^10.2.2` (fixed only in 11.0.1); left documented rather than forced. Production audit remains 0. Pending Codex review and owner commit/merge/push approval on `task/RI-DEPS-002-dev-tool-security`.
+
 The following is the backend short-status inventory captured immediately before writing these handoff documents. It includes earlier/user work and must not be discarded. This task additionally creates docs/context in the frontend, a backend pointer document and README links.
 
 ```text
