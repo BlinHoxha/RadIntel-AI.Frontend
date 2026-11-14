@@ -79,7 +79,10 @@ jobs:
           cache: npm
           cache-dependency-path: RadIntel-AI.Frontend/package-lock.json
       - run: npm ci
-      - run: dotnet run --project ../RadIntel-AI/tools/RadIntel.OpenApi -- "$GITHUB_WORKSPACE/RadIntel-AI.Frontend/api/openapi.json" --check
+      # Run from the backend so its global.json selects the pinned .NET SDK; the runner image
+      # also ships newer SDKs, which the frontend folder (no global.json) would pick up.
+      - run: dotnet run --project tools/RadIntel.OpenApi -- "$GITHUB_WORKSPACE/RadIntel-AI.Frontend/api/openapi.json" --check
+        working-directory: RadIntel-AI
       - run: npm run contracts:check
       - run: npx playwright install --with-deps chromium
         timeout-minutes: 5
